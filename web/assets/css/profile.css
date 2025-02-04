@@ -1,0 +1,162 @@
+/* General Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Poppins", Arial, sans-serif;
+  background-color: #121212; /* Dark Background */
+  color: #ffffff; /* Text Color */
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Card Style */
+.card {
+  background-color: #1e1e1e; /* Dark Card Background */
+  border-radius: 15px;
+  padding: 25px;
+  margin: 20px 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
+  max-width: 700px;
+}
+
+.card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Header Style */
+h1,
+h2,
+h3 {
+  color: #9c27b0; /* Royal Purple Accent */
+  margin-bottom: 10px;
+}
+
+/* Text Styles */
+p {
+  color: #cccccc; /* Light Gray Text */
+  margin-bottom: 10px;
+}
+
+/* Graph Containers */
+.graph-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.graph-title {
+  font-size: 1.5rem;
+  color: #9c27b0; /* Royal Purple Accent */
+  margin-bottom: 10px;
+}
+
+svg {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  border: 1px solid #333333; /* Subtle Border for Graphs */
+  border-radius: 8px;
+  overflow: visible;
+}
+
+/* Tooltip Styling */
+.tooltip {
+  position: absolute;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+/* Buttons */
+button {
+  background-color: #9c27b0; /* Royal Purple Button */
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+button:hover {
+  background-color: #8e24aa; /* Darker Royal Purple on Hover */
+  transform: scale(1.05);
+}
+
+/* Links */
+a {
+  color: #9c27b0; /* Royal Purple Link */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #8e24aa; /* Darker Royal Purple on Hover */
+}
+
+/* Input Fields */
+input,
+textarea {
+  background-color: #2b2b2b;
+  color: #ffffff;
+  border: 1px solid #333333;
+  padding: 8px;
+  border-radius: 4px;
+  width: 100%;
+  transition: border-color 0.3s ease;
+}
+
+input:focus,
+textarea:focus {
+  border-color: #9c27b0; /* Royal Purple Focus */
+  outline: none;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th,
+td {
+  border: 1px solid #333333;
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #1e1e1e;
+  color: #9c27b0; /* Royal Purple Header */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card {
+    padding: 15px;
+    margin: 15px 0;
+  }
+
+  svg {
+    max-width: 100%;
+  }
+}
