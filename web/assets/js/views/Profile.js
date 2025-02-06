@@ -117,39 +117,86 @@ export default class extends View {
 
   async getHtml() {
     return `
-     <div class="card">
-  <h2>User Profile</h2>
-  <div id="home" class="user-details">
-    <p><strong>Full Name:</strong> <span class="full-name"></span></p>
-    <p><strong>Role:</strong> <span class="role"></span></p>
-    <p><strong>Phone Number:</strong> <span class="phone-number">(+212) 604121130</span></p>
-    <p><strong>Email Address:</strong> <span class="email">oamyay@proton.me</span></p>
-    <p><strong>Current Level:</strong> <span class="current-level"></span></p>
-    <p><strong>Experience Points:</strong> <span class="xp"></span></p>
-    <p><strong>Audit Ratio:</strong> <span class="ratio"></span></p>
-    <p><strong>Last Project:</strong> <span class="last-project"></span></p>
-  </div>
-</div>
+     <div class="container">
+        <div class="general_info">
+          <div class="head">
+            <h1 class="title"><div class="vh"></div>Details Profile</h1>
+            <button class="logout">logout</button>
+          </div>
+          <div class="content">
+            <div class="top">
+              <img src="https://e7.pngegg.com/pngimages/497/995/png-clipart-scroodgee-brazzers-sticker-kingdoms-and-castles-music-others-game-physical-fitness-thumbnail.png" alt="jkj">
+              <div class="info">
+                <h3 class="fullname">Dave Domble</h3>
+                <div class="cards">
+                  <div class="card">
+                    <h2 class="card-title">Role</h2>
+                    <p class="card-text">davedomble@gmail.com</p>
+                  </div>
+                  <div class="card">
+                    <h2 class="card-title">Phone Number</h2>
+                    <p class="card-text">+1234567890</p>
+                  </div>
+                  <div class="card">
+                    <h2 class="card-title">Email</h2>
+                    <p class="card-text">davedomble@gmail.com</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="cards with-bg">
+              <div class="card">
+                <h2 class="card-title">Role</h2>
+                <p class="card-text">davedomble@gmail.com</p>
+              </div>
+              <div class="card">
+                <h2 class="card-title">Phone Number</h2>
+                <p class="card-text">+1234567890</p>
+              </div>
+              <div class="card">
+                <h2 class="card-title">Email</h2>
+                <p class="card-text">davedomble@gmail.com</p>
+              </div>
+              <div class="card">
+                <h2 class="card-title">Email</h2>
+                <p class="card-text">davedomble@gmail.com</p>
+              </div>
+            </div>
+          </div>
 
-<div id="skills" class="graph-container">
-  <h3 class="graph-title">Top Skills</h3>
-  <div class="skill-graph"></div>
-</div>
-
-<div class="graph-container">
-  <h3 class="graph-title">XP Progression</h3>
-  <div class="xp-graph"></div>
-</div>
-
-<div class="graph-container">
-  <h3 class="graph-title">Audit Ratio</h3>
-  <div class="audit-graph"></div>
-</div>
-
-<div class="graph-container">
-  <h3 class="graph-title">Project Status</h3>
-  <div class="stat-graph"></div>
-</div>
+        </div>
+      </div>
+      <div class="container mt">
+        <div class="general_info">
+          <div class="head">
+            <h1 class="title"><div class="vh"></div>Bla bla bla</h1>
+          </div>
+          <div class="content mt">
+            <div class="cards with-bg">
+              <div class="card">
+                <h2 class="card-title">Audit Ratio</h2>
+                <svg></svg>
+              </div>
+              <div class="card">
+                <h2 class="card-title">Top Skills</h2>
+                <svg></svg>
+              </div>
+            </div>
+          </div>
+          <div class="content mt">
+            <div class="cards with-bg">
+              <div class="card">
+                <h2 class="card-title">Project Status</h2>
+                <svg></svg>
+              </div>
+              <div class="card">
+                <h2 class="card-title">XP Progression</h2>
+                <svg></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     `;
   }
 

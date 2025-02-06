@@ -46,8 +46,8 @@ async function router() {
   if (view instanceof Profile) {
     let navbarView = new NavBar();
     navbarView.addStyle("navbar");
-    document.querySelector("#headerContainer").innerHTML =
-      await navbarView.getHtml();
+    // document.querySelector("#headerContainer").innerHTML =
+    //   await navbarView.getHtml();
 
     navbarView.init();
   } else {

@@ -28,26 +28,20 @@ export default class extends View {
 
   async getHtml() {
     return `
-        <div class="login-container">
-            <h1>Login To Your Profile</h1>
-            <form id="form-login">
-                <input
-                    type="text"
-                    id="username"
-                    placeholder="Username or Email"
-                    required
-                />
-                <p id="username-error" class="error"></p>
-                <input
-                    type="password"
-                    id="password"
-                    placeholder="Password"
-                    required
-                />
-                <p id="password-error" class="error"></p>
-                <button id="login-btn" type="submit" >Login</button>
-            </form>
-            <p class="error" id="login-error"></p>
+        <div class="form-container">
+          <p class="title">Login To Your Account</p>
+          <form class="form" id="form-login">
+            <div class="input-group">
+              <label for="username">Username</label>
+              <input type="text" name="username" id="username" placeholder="">
+            </div>
+            <div class="input-group">
+              <label for="password">Password</label>
+              <input type="password" name="password" id="password" placeholder="">
+            </div>
+            <button type="submit" class="sign">Sign in</button>
+          </form>
+          <p class="error" id="login-error"></p>
         </div>
     `;
   }
