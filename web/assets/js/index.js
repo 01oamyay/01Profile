@@ -1,5 +1,4 @@
 import utils from "./utils/utils.js";
-import NavBar from "./views/NavBar.js";
 import Profile from "./views/Profile.js";
 import SignIn from "./views/SignIn.js";
 
@@ -42,17 +41,6 @@ async function router() {
 
   view.removeStyles();
   view.addStyle(page.style);
-
-  if (view instanceof Profile) {
-    let navbarView = new NavBar();
-    navbarView.addStyle("navbar");
-    // document.querySelector("#headerContainer").innerHTML =
-    //   await navbarView.getHtml();
-
-    navbarView.init();
-  } else {
-    document.querySelector("#headerContainer").innerHTML = "";
-  }
 
   let appContainer = document.getElementById("app");
   appContainer.innerHTML = await view.getHtml();

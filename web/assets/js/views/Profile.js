@@ -78,8 +78,15 @@ async function getData() {
   );
 
   const data = await response.json();
-  if (data?.errors && data?.errors[0]?.extensions?.code == "invalid-jwt") {
-    utils.LogOut();
+  if (data?.errors) {
+    if (data?.errors[0]?.extensions?.code == "invalid-jwt") {
+      utils.LogOut();
+    } else {
+      console.error(data.errors);
+      // show an alert an then after user click ok refrech the page
+      alert("Unexpected Error");
+      window.location.reload();
+    }
     return;
   }
   return data.data;
@@ -113,6 +120,16 @@ export default class extends View {
   constructor(params) {
     super(params);
     this.setTitle("01 Profile");
+    this.listeners = false;
+  }
+
+  addEventListener() {
+    if (this.listeners) return;
+    let logOutBtn = document.querySelector(".logout");
+    logOutBtn?.addEventListener("click", () => {
+      utils.LogOut();
+    });
+    this.listeners = true;
   }
 
   async getHtml() {
@@ -125,41 +142,41 @@ export default class extends View {
           </div>
           <div class="content">
             <div class="top">
-              <img src="https://e7.pngegg.com/pngimages/497/995/png-clipart-scroodgee-brazzers-sticker-kingdoms-and-castles-music-others-game-physical-fitness-thumbnail.png" alt="jkj">
+              <img class="pfp" src="/assets/holder.webp" alt="pfp">
               <div class="info">
-                <h3 class="fullname">Dave Domble</h3>
+                <h3 class="full-name"></h3>
                 <div class="cards">
                   <div class="card">
                     <h2 class="card-title">Role</h2>
-                    <p class="card-text">davedomble@gmail.com</p>
+                    <p class="card-text role"></p>
                   </div>
                   <div class="card">
                     <h2 class="card-title">Phone Number</h2>
-                    <p class="card-text">+1234567890</p>
+                    <p class="card-text phone-number"></p>
                   </div>
                   <div class="card">
                     <h2 class="card-title">Email</h2>
-                    <p class="card-text">davedomble@gmail.com</p>
+                    <p class="card-text email">davedomble@gmail.com</p>
                   </div>
                 </div>
               </div>
             </div>
             <div class="cards with-bg">
               <div class="card">
-                <h2 class="card-title">Role</h2>
-                <p class="card-text">davedomble@gmail.com</p>
+                <h2 class="card-title">Current Level</h2>
+                <p class="card-text current-level"></p>
               </div>
               <div class="card">
-                <h2 class="card-title">Phone Number</h2>
-                <p class="card-text">+1234567890</p>
+                <h2 class="card-title">Experience Points</h2>
+                <p class="card-text xp"></p>
               </div>
               <div class="card">
-                <h2 class="card-title">Email</h2>
-                <p class="card-text">davedomble@gmail.com</p>
+                <h2 class="card-title">Audit Ratio</h2>
+                <p class="card-text ratio"></p>
               </div>
               <div class="card">
-                <h2 class="card-title">Email</h2>
-                <p class="card-text">davedomble@gmail.com</p>
+                <h2 class="card-title">Last Project</h2>
+                <p class="card-text last-project"></p>
               </div>
             </div>
           </div>
@@ -169,31 +186,38 @@ export default class extends View {
       <div class="container mt">
         <div class="general_info">
           <div class="head">
-            <h1 class="title"><div class="vh"></div>Bla bla bla</h1>
+            <h1 class="title"><div class="vh"></div>Statistics</h1>
           </div>
           <div class="content mt">
             <div class="cards with-bg">
-              <div class="card">
+              <div class="card audit-graph">
                 <h2 class="card-title">Audit Ratio</h2>
-                <svg></svg>
+                
               </div>
-              <div class="card">
+              <div class="card skill-graph">
                 <h2 class="card-title">Top Skills</h2>
-                <svg></svg>
+                
               </div>
             </div>
           </div>
           <div class="content mt">
             <div class="cards with-bg">
-              <div class="card">
-                <h2 class="card-title">Project Status</h2>
-                <svg></svg>
-              </div>
-              <div class="card">
+
+              <div class="card xp-graph">
                 <h2 class="card-title">XP Progression</h2>
-                <svg></svg>
+                
               </div>
             </div>
+            
+          </div>
+          <div class="content mt">
+            <div class="cards with-bg">
+              <div class="card stat-graph">
+                <h2 class="card-title">Project Status</h2>
+                
+              </div>
+            </div>
+            
           </div>
         </div>
       </div>
@@ -201,11 +225,15 @@ export default class extends View {
   }
 
   async init() {
+    this.addEventListener();
     let data = await getData();
     if (!data) return;
 
     data.userRole = getUserRole(data?.level[0]?.amount);
     console.log(data);
+
+    let pfp = document.querySelector(".pfp");
+    pfp.src = getAvatar(data?.user[0]?.attrs?.gender, data?.user[0]?.login);
 
     let fullName = document.querySelector(".full-name");
     fullName.innerText = `${data?.user[0]?.firstName || ""} ${
@@ -262,84 +290,121 @@ export default class extends View {
   }
 }
 
-function createXpProg(progress) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  const width = 800;
-  const height = 400;
+function getAvatar(gender, username) {
+  return `https://avatar.iran.liara.run/public/${
+    gender == "Male" ? "boy" : "girl"
+  }?username=${username}`;
+}
 
-  // Calculate data points
-  let accXP = 0;
-  const dataPoints = progress.map((prog) => {
-    accXP += prog.amount || 0;
+function createXpProg(data) {
+  const sortedData = data.sort(
+    (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+  );
+  let cumulativeXP = 0;
+  const dataPoints = sortedData.map((transaction) => {
+    cumulativeXP += transaction.amount;
     return {
-      date: new Date(prog.createdAt),
-      name: prog.object.name,
-      xp: accXP,
+      date: new Date(transaction.createdAt),
+      name: transaction.object.name,
+      xp: cumulativeXP,
     };
   });
 
-  // Define scales
   const startDate = dataPoints[0].date;
   const endDate = dataPoints[dataPoints.length - 1].date;
   const maxXP = dataPoints[dataPoints.length - 1].xp;
 
-  const sx = (date) => ((date - startDate) / (endDate - startDate)) * width;
-  const sy = (xp) => height - (xp / maxXP) * height;
+  const width = 680;
+  const height = 303;
 
-  // Create path
+  function scaleX(date) {
+    const timeRange = endDate - startDate;
+    const timePosition = date - startDate;
+    return (timePosition / timeRange) * width;
+  }
+
+  function scaleY(xp) {
+    return height - (xp / maxXP) * height;
+  }
+
   const pathData = dataPoints
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${sx(p.date)} ${sy(p.xp)}`)
+    .map((point, index) => {
+      const x = scaleX(point.date);
+      const y = scaleY(point.xp);
+      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+    })
     .join(" ");
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("height", "100%");
+  svg.setAttribute("width", "100%");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("style", "overflow: visible");
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", pathData);
-  path.setAttribute("stroke", "#9c27b0");
+  path.setAttribute("stroke", "#b6b8ba");
   path.setAttribute("fill", "none");
   path.setAttribute("stroke-width", "2");
 
-  // Add circles and tooltips
+  svg.appendChild(path);
+
   dataPoints.forEach((point) => {
     const circle = document.createElementNS(
       "http://www.w3.org/2000/svg",
       "circle"
     );
-    circle.setAttribute("cx", sx(point.date));
-    circle.setAttribute("cy", sy(point.xp));
+    const x = scaleX(point.date);
+    const y = scaleY(point.xp);
+
+    circle.setAttribute("cx", x);
+    circle.setAttribute("cy", y);
     circle.setAttribute("r", "4");
-    circle.setAttribute("fill", "#9c27b0");
+    circle.setAttribute("fill", "#4ffdca");
 
-    circle.addEventListener("mouseover", () => {
+    circle.addEventListener("mouseover", (e) => {
       circle.setAttribute("r", "6");
-      const tooltip = document.createElement("div");
+      const tooltip = document.createElement("div", "tooltip");
       tooltip.className = "tooltip";
-      tooltip.style.left = `${sx(point.date) + 10}px`;
-      tooltip.style.top = `${sy(point.xp) - 20}px`;
-      tooltip.textContent = `Name: ${point.name}\nTotal XP: ${Math.round(
-        point.xp
-      )}`;
+      tooltip.style.position = "absolute";
+      tooltip.style.left = `${e.pageX + 30}px`;
+      tooltip.style.top = `${e.pageY - 5}px`;
+      tooltip.style.color = "white";
+      tooltip.style.fontSize = "12px";
+
+      tooltip.innerHTML = `
+        Name: ${point.name}<br>
+        Total XP: ${bTokb(point.xp)}
+      `;
+
       document.body.appendChild(tooltip);
+      circle.addEventListener("mouseout", () => {
+        circle.setAttribute("r", "4");
+        tooltip.remove();
+      });
     });
-
-    circle.addEventListener("mouseout", () => {
-      circle.setAttribute("r", "4");
-      document.querySelector(".tooltip")?.remove();
-    });
-
     svg.appendChild(circle);
   });
 
-  svg.setAttribute("width", width);
-  svg.setAttribute("height", height);
-  document.querySelector(".xp-graph").appendChild(svg);
+  let xpDiv = document.querySelector(".xp-graph");
+  if (xpDiv) {
+    xpDiv.append(svg);
+  }
 }
 
 function createSkillsGraph(topSkills) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 400 400`);
+  svg.style.width = "100%";
+  svg.style.height = "auto";
+
   // Configuration
-  const width = 500; // Width of the SVG
-  const height = 500; // Height of the SVG
+  const width = 400; // Width of the SVG
+  const height = 400; // Height of the SVG
   const centerX = width / 2; // Center X
   const centerY = height / 2; // Center Y
-  const maxRadius = Math.min(width, height) / 2 - 20; // Radius of the radar chart
+  const maxRadius = Math.min(width, height) / 2 - 30; // Radius of the radar chart
   const maxValue = Math.max(...topSkills.map((skill) => skill.amount)); // Maximum skill value
 
   // Normalize skill amounts to fit within the radar chart
@@ -382,11 +447,6 @@ function createSkillsGraph(topSkills) {
     labelPoints.push(outerPoint);
   }
 
-  // Create the SVG element
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("width", width);
-  svg.setAttribute("height", height);
-
   // Add grid lines
   svg.innerHTML += gridLines.join("");
 
@@ -399,7 +459,7 @@ function createSkillsGraph(topSkills) {
   // Add the polygon for the radar chart
   const polygon = `<polygon points="${points.join(
     " "
-  )}" fill="rgba(0, 128, 255, 0.3)" stroke="#007bff" />`;
+  )}" fill="rgba(79, 253, 202, 0.6)" stroke="#4ffdca" />`;
   svg.innerHTML += polygon;
 
   // Add labels for each skill
@@ -411,9 +471,24 @@ function createSkillsGraph(topSkills) {
       maxRadius + 20,
       angle
     );
-    const text = `<text x="${labelPoint.x}" y="${
-      labelPoint.y
-    }" text-anchor="middle" dominant-baseline="middle" font-size="12">${skill.type.replace(
+
+    // Adjust text positioning for top and bottom labels
+    const adjustedLabelPoint = {
+      x: labelPoint.x,
+      y: labelPoint.y,
+    };
+
+    if (angle > 270 || angle < 90) {
+      // Top labels: Move slightly downward
+      adjustedLabelPoint.y += 10;
+    } else if (angle > 90 && angle < 270) {
+      // Bottom labels: Move slightly upward
+      adjustedLabelPoint.y -= 10;
+    }
+
+    const text = `<text x="${adjustedLabelPoint.x}" y="${
+      adjustedLabelPoint.y
+    }" text-anchor="middle" dominant-baseline="middle" font-size="18" fill="#fafafb">${skill.type.replace(
       "skill_",
       ""
     )}</text>`;
@@ -423,25 +498,24 @@ function createSkillsGraph(topSkills) {
   // Append the SVG to the specified container
   const container = document.querySelector(".skill-graph");
   if (container) {
-    container.innerHTML = ""; // Clear previous content
     container.appendChild(svg);
   }
 }
 
 function createAuditGraph(data) {
-  const { totalUp, totalDown, auditRatio } = data;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 400 400");
+  svg.style.width = "100%";
+  svg.style.height = "auto";
+
+  const { totalUp, totalDown } = data;
 
   // Configuration
-  const width = 300;
-  const height = 150;
-  const barWidth = 50;
+  const width = 400;
+  const height = 400;
+  const barWidth = 100;
   const barHeight = Math.min(totalUp, totalDown); // Use the smaller value as max height
   const scale = (height * 0.8) / barHeight; // Scale factor for bar height
-
-  // Create SVG element
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("width", width);
-  svg.setAttribute("height", height);
 
   // Calculate heights
   const upHeight = totalUp * scale;
@@ -453,7 +527,7 @@ function createAuditGraph(data) {
   upRect.setAttribute("y", height - upHeight);
   upRect.setAttribute("width", barWidth);
   upRect.setAttribute("height", upHeight);
-  upRect.setAttribute("fill", "#4caf50"); // Green for 'up'
+  upRect.setAttribute("fill", "#4ffdca");
   svg.appendChild(upRect);
 
   // Draw 'totalDown' segment
@@ -465,7 +539,7 @@ function createAuditGraph(data) {
   downRect.setAttribute("y", height - (upHeight + downHeight));
   downRect.setAttribute("width", barWidth);
   downRect.setAttribute("height", downHeight);
-  downRect.setAttribute("fill", "#f44336"); // Red for 'down'
+  downRect.setAttribute("fill", "#ff0826");
   svg.appendChild(downRect);
 
   // Add labels
@@ -477,7 +551,7 @@ function createAuditGraph(data) {
   upLabel.setAttribute("y", height - upHeight / 2);
   upLabel.setAttribute("text-anchor", "middle");
   upLabel.setAttribute("font-size", "12");
-  upLabel.textContent = `Up: ${totalUp}`;
+  upLabel.textContent = `Up: ${bTokb(totalUp)}`;
   svg.appendChild(upLabel);
 
   const downLabel = document.createElementNS(
@@ -494,32 +568,36 @@ function createAuditGraph(data) {
   // Append SVG to container
   const container = document.querySelector(".audit-graph");
   if (container) {
-    container.innerHTML = ""; // Clear previous content
     container.appendChild(svg);
   }
 }
 
 function createProjectStatusGraphWithDate(projects, containerId) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const heightPerProject = 30;
+  const totalHeight = projects.length * heightPerProject + 20;
+  svg.setAttribute("viewBox", `0 0 700 ${totalHeight}`);
+  svg.style.width = "100%";
+  svg.style.height = "auto";
+
   // Configuration
   const width = 700; // Increased width to accommodate the date
-  const heightPerProject = 30; // Height for each project row
-  const totalHeight = projects.length * heightPerProject + 20; // Total height of the chart
   const barWidthScale = 0.6; // Scale factor for bar width
   const maxBarWidth = width * barWidthScale;
-
-  // Create SVG element
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("width", width);
-  svg.setAttribute("height", totalHeight);
 
   // Helper function to determine bar color and status
   function getBarColorAndStatus(grade) {
     if (grade === null) {
       return { color: "#aaaaaa", status: "Ungraded" }; // Gray for ungraded
     } else if (grade >= 1) {
-      return { color: "#4caf50", status: "Pass" }; // Green for pass
+      return { color: "#08FFE1", status: "Pass", text: "#000", date: "#555" };
     } else {
-      return { color: "#f44336", status: "Fail" }; // Red for fail
+      return {
+        color: "#ff0826",
+        status: "Fail",
+        text: "white",
+        date: "#a5a5a5",
+      };
     }
   }
 
@@ -535,7 +613,7 @@ function createProjectStatusGraphWithDate(projects, containerId) {
   // Draw each project as a horizontal bar
   projects.forEach((project, index) => {
     const { name, grade, createdAt } = project;
-    const { color, status } = getBarColorAndStatus(grade);
+    const { color, status, text, date } = getBarColorAndStatus(grade);
 
     // Calculate position and dimensions
     const y = index * heightPerProject + 10; // Vertical position
@@ -558,7 +636,7 @@ function createProjectStatusGraphWithDate(projects, containerId) {
     nameText.setAttribute("x", 10);
     nameText.setAttribute("y", y + heightPerProject / 2 + 3); // Centered vertically
     nameText.setAttribute("font-size", "12");
-    nameText.setAttribute("fill", "#000");
+    nameText.setAttribute("fill", text);
     nameText.textContent = name;
     svg.appendChild(nameText);
 
@@ -567,10 +645,10 @@ function createProjectStatusGraphWithDate(projects, containerId) {
       "http://www.w3.org/2000/svg",
       "text"
     );
-    dateText.setAttribute("x", 180); // Offset for the date
-    dateText.setAttribute("y", y + heightPerProject / 2 + 3); // Centered vertically
+    dateText.setAttribute("x", 200);
+    dateText.setAttribute("y", y + heightPerProject / 2 + 3);
     dateText.setAttribute("font-size", "12");
-    dateText.setAttribute("fill", "#555");
+    dateText.setAttribute("fill", date);
     dateText.textContent = `${formatDate(createdAt)}`;
     svg.appendChild(dateText);
 
@@ -579,10 +657,10 @@ function createProjectStatusGraphWithDate(projects, containerId) {
       "http://www.w3.org/2000/svg",
       "text"
     );
-    statusText.setAttribute("x", width - 180); // Right-aligned
-    statusText.setAttribute("y", y + heightPerProject / 2 + 3); // Centered vertically
+    statusText.setAttribute("x", width - 180);
+    statusText.setAttribute("y", y + heightPerProject / 2 + 3);
     statusText.setAttribute("font-size", "12");
-    statusText.setAttribute("fill", "#000");
+    statusText.setAttribute("fill", text);
     statusText.textContent = `${status} (${
       grade !== null ? grade.toFixed(2) : "N/A"
     })`;
@@ -592,7 +670,6 @@ function createProjectStatusGraphWithDate(projects, containerId) {
   // Append SVG to container
   const container = document.querySelector(".stat-graph");
   if (container) {
-    container.innerHTML = ""; // Clear previous content
     container.appendChild(svg);
   }
 }

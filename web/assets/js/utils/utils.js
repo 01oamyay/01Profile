@@ -1,6 +1,7 @@
 import main from "../index.js";
 
 function isLoggedIn() {
+  console.log(localStorage.getItem("jwt"));
   return localStorage.getItem("jwt") !== null;
 }
 
