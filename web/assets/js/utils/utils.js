@@ -1,8 +1,8 @@
 import main from "../index.js";
 
 function isLoggedIn() {
-  console.log(localStorage.getItem("jwt"));
-  return localStorage.getItem("jwt") !== null;
+  const token = localStorage.getItem("jwt");
+  return token?.length;
 }
 
 function showError(status, msg) {
@@ -24,7 +24,6 @@ function showError(status, msg) {
 
 function LogOut() {
   localStorage.removeItem("jwt");
-  console.log("log out");
   main.navigate("/sign-in");
 }
 

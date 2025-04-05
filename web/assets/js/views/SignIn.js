@@ -34,10 +34,12 @@ export default class extends View {
             <div class="input-group">
               <label for="username">Username</label>
               <input type="text" name="username" id="username" placeholder="">
+              <p class="error" id="username-error"></p>
             </div>
             <div class="input-group">
               <label for="password">Password</label>
               <input type="password" name="password" id="password" placeholder="">
+              <p class="error" id="password-error"></p>
             </div>
             <button type="submit" class="sign">Sign in</button>
           </form>
@@ -56,16 +58,19 @@ export default class extends View {
       let usernameError = document.getElementById("username-error");
       let passwordError = document.getElementById("password-error");
       let loginError = document.getElementById("login-error");
-      let loginBtn = document.getElementById("login-btn");
 
       // validate username & password
       if (!username) {
         usernameError.textContent = "Username is required";
         return;
+      } else {
+        usernameError.textContent = "";
       }
       if (!password) {
         passwordError.textContent = "Password is required";
         return;
+      } else {
+        passwordError.textContent = "";
       }
 
       try {

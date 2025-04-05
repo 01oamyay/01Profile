@@ -1,0 +1,105 @@
+.container {
+  max-width: 1420px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.general_info {
+  padding: 15px 30px;
+  background: #111315;
+  border-radius: 15px;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vh {
+  width: 5px;
+  height: 30px;
+  background: #4ffdca;
+  border-radius: 10px;
+}
+.top {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.info {
+  width: 100%;
+}
+h1.title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 24px;
+  color: #fafafb;
+}
+
+.content img {
+  width: 115px;
+  border-radius: 50%;
+  background-size: cover;
+}
+
+h3.fullname {
+  font-size: 20px;
+}
+
+.cards {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.card {
+  min-width: max-content;
+}
+
+h2.card-title {
+  font-size: 16px;
+  color: #b6b8ba;
+}
+
+p.card-text {
+  font-size: 14px;
+  color: #f7f7f7;
+  font-weight: 500;
+}
+
+.with-bg .card {
+  background: #292c2d;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.cards.with-bg {
+  gap: 10px;
+}
+
+.mt {
+  margin-top: 20px !important;
+}
+
+.xp-graph {
+  min-width: 100%;
+}
+
+.stat-graph {
+  min-width: 100%;
+}
+
+svg {
+  border-radius: 6px;
+  margin-top: 10px;
+}
+
+.with-bg h2.card-title {
+  font-size: 12px;
+}

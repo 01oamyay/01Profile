@@ -51,6 +51,16 @@ document.addEventListener("DOMContentLoaded", () => {
   router();
 });
 
+window.addEventListener("storage", (e) => {
+  console.log(e);
+  if (e?.key === "jwt" && e?.oldValue !== e?.newValue) {
+    if (!e.newValue?.length) {
+      localStorage.removeItem("jwt");
+    }
+    window.location.reload();
+  }
+});
+
 window.addEventListener("popstate", router);
 
 export default { navigate };

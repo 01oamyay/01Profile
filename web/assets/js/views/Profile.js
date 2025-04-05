@@ -65,35 +65,44 @@ const query = `
 `;
 
 async function getData() {
-  const response = await fetch(
-    "https://learn.zone01oujda.ma/api/graphql-engine/v1/graphql",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("jwt")}`,
-      },
-      body: JSON.stringify({ query }),
-    }
-  );
+  try {
+    const response = await fetch(
+      "https://learn.zone01oujda.ma/api/graphql-engine/v1/graphql",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("jwt")}`,
+        },
+        body: JSON.stringify({ query }),
+      }
+    );
 
-  const data = await response.json();
-  if (data?.errors) {
-    if (data?.errors[0]?.extensions?.code == "invalid-jwt") {
-      utils.LogOut();
-    } else {
-      console.error(data.errors);
-      // show an alert an then after user click ok refrech the page
-      alert("Unexpected Error");
-      window.location.reload();
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return;
+
+    const data = await response.json();
+
+    if (data?.errors) {
+      if (data?.errors[0]?.extensions?.code === "invalid-jwt") {
+        utils.LogOut();
+      } else {
+        console.error("GraphQL errors:", data.errors);
+        window.location.reload();
+      }
+      return null;
+    }
+
+    return data?.data || null;
+  } catch (error) {
+    console.error("Fetch error:", error);
+    return null;
   }
-  return data.data;
 }
 
 function getUserRole(userLevel) {
-  let available = {
+  const available = {
     0: "Aspiring developer",
     10: "Beginner developer",
     20: "Apprentice developer",
@@ -137,7 +146,7 @@ export default class extends View {
      <div class="container">
         <div class="general_info">
           <div class="head">
-            <h1 class="title"><div class="vh"></div>Details Profile</h1>
+            <h1 class="title"><div class="vh"></div>General Info</h1>
             <button class="logout">logout</button>
           </div>
           <div class="content">
@@ -156,7 +165,7 @@ export default class extends View {
                   </div>
                   <div class="card">
                     <h2 class="card-title">Email</h2>
-                    <p class="card-text email">davedomble@gmail.com</p>
+                    <p class="card-text email"></p>
                   </div>
                 </div>
               </div>
@@ -180,7 +189,6 @@ export default class extends View {
               </div>
             </div>
           </div>
-
         </div>
       </div>
       <div class="container mt">
@@ -192,32 +200,25 @@ export default class extends View {
             <div class="cards with-bg">
               <div class="card audit-graph">
                 <h2 class="card-title">Audit Ratio</h2>
-                
               </div>
               <div class="card skill-graph">
                 <h2 class="card-title">Top Skills</h2>
-                
               </div>
             </div>
           </div>
           <div class="content mt">
             <div class="cards with-bg">
-
               <div class="card xp-graph">
                 <h2 class="card-title">XP Progression</h2>
-                
               </div>
             </div>
-            
           </div>
           <div class="content mt">
             <div class="cards with-bg">
               <div class="card stat-graph">
                 <h2 class="card-title">Project Status</h2>
-                
               </div>
             </div>
-            
           </div>
         </div>
       </div>
@@ -226,67 +227,134 @@ export default class extends View {
 
   async init() {
     this.addEventListener();
-    let data = await getData();
-    if (!data) return;
+    let data;
+    try {
+      data = await getData();
+      if (!data) {
+        this.showDataError();
+        return;
+      }
+    } catch (error) {
+      console.error("Initialization error:", error);
+      this.showDataError();
+      return;
+    }
 
-    data.userRole = getUserRole(data?.level[0]?.amount);
-    console.log(data);
+    // Process and validate user data
+    const user = data?.user?.[0] || {};
+    const level = data?.level?.[0]?.amount || 0;
+    const totalXp = data?.totalXp?.aggregate?.sum?.amount || 0;
+    const xpProgress = data?.xpProgress || [];
+    const projects = data?.projects || [];
 
+    data.userRole = getUserRole(level);
+
+    // Set profile data with fallbacks
     let pfp = document.querySelector(".pfp");
-    pfp.src = getAvatar(data?.user[0]?.attrs?.gender, data?.user[0]?.login);
+    pfp.src =
+      getAvatar(user?.attrs?.gender, user?.login) || "/assets/holder.webp";
 
-    let fullName = document.querySelector(".full-name");
-    fullName.innerText = `${data?.user[0]?.firstName || ""} ${
-      data?.user[0]?.lastName || ""
-    }`;
-
-    let role = document.querySelector(".role");
-    role.innerText = data.userRole;
-
-    let phoneNumber = document.querySelector(".phone-number");
-    phoneNumber.innerText = data?.user[0]?.attrs.tel || "-";
-
-    let emailAddress = document.querySelector(".email");
-    emailAddress.innerText = data?.user[0]?.attrs.email || "-";
-
-    let currentLevel = document.querySelector(".current-level");
-    currentLevel.innerText = data?.level[0]?.amount || "-";
-
-    let xp = document.querySelector(".xp");
-    xp.innerText = bTokb(data?.totalXp?.aggregate?.sum?.amount) || "0B";
-
-    let auditRatio = document.querySelector(".ratio");
-    auditRatio.innerText = data?.user[0]?.auditRatio
-      ? data?.user[0]?.auditRatio?.toFixed(1)
-      : "0.0";
-
-    let lastProject = document.querySelector(".last-project");
-    lastProject.innerText =
-      data?.xpProgress[data?.xpProgress?.length - 1]?.object?.name || "-";
-
-    data.user[0].topSkills = data.user[0].topSkills
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 6);
-
-    // xp progress  graph
-    createXpProg(data.xpProgress);
-    createSkillsGraph(data.user[0].topSkills);
-
-    let auditData = {
-      totalUp: data.user[0].totalUp,
-      totalDown: data.user[0].totalDown,
-      auditRation: data.user[0].auditRatio,
-    };
-    createAuditGraph(auditData);
-    createProjectStatusGraphWithDate(
-      data.projects.map((p) => {
-        return {
-          name: p.object.name,
-          grade: p.grade,
-          createdAt: new Date(p.createdAt),
-        };
-      })
+    this.setTextWithFallback(
+      ".full-name",
+      `${user?.firstName || ""} ${user?.lastName || ""}`,
+      "-"
     );
+    this.setTextWithFallback(".role", data.userRole, "Unknown role");
+    this.setTextWithFallback(".phone-number", user?.attrs?.tel, "-");
+    this.setTextWithFallback(".email", user?.attrs?.email, "-");
+    this.setTextWithFallback(".current-level", level, "-");
+    this.setTextWithFallback(".xp", bTokb(totalXp), "0B");
+    this.setTextWithFallback(".ratio", user?.auditRatio?.toFixed(1), "0.0");
+
+    const lastProject =
+      xpProgress.length > 0
+        ? xpProgress[xpProgress.length - 1]?.object?.name
+        : null;
+    this.setTextWithFallback(".last-project", lastProject, "-");
+
+    // Process and validate graphs data
+    try {
+      // Top skills graph
+      const topSkills = (user.topSkills || [])
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 6);
+
+      if (topSkills.length > 0) {
+        createSkillsGraph(topSkills);
+      } else {
+        this.showNoDataMessage(".skill-graph");
+      }
+
+      // XP progress graph
+      if (xpProgress.length > 0) {
+        createXpProg(xpProgress);
+      } else {
+        this.showNoDataMessage(".xp-graph");
+      }
+
+      // Audit graph
+      const auditData = {
+        totalUp: user.totalUp || 0,
+        totalDown: user.totalDown || 0,
+        auditRatio: user.auditRatio || 0,
+      };
+
+      if (auditData.totalUp > 0 || auditData.totalDown > 0) {
+        createAuditGraph(auditData);
+      } else {
+        this.showNoDataMessage(".audit-graph");
+      }
+
+      // Projects status graph
+      if (projects.length > 0) {
+        createProjectStatusGraphWithDate(
+          projects.map((p) => ({
+            name: p.object?.name || "Unknown project",
+            grade: p.grade,
+            createdAt: new Date(p.createdAt),
+          }))
+        );
+      } else {
+        this.showNoDataMessage(".stat-graph");
+      }
+    } catch (error) {
+      console.error("Graph rendering error:", error);
+      [".skill-graph", ".xp-graph", ".audit-graph", ".stat-graph"].forEach(
+        (selector) => {
+          this.showNoDataMessage(selector);
+        }
+      );
+    }
+  }
+
+  setTextWithFallback(selector, value, fallback = "-") {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.textContent =
+        value !== null && value !== undefined ? value : fallback;
+    }
+  }
+
+  showNoDataMessage(selector) {
+    const container = document.querySelector(selector);
+    if (container) {
+      container.innerHTML = `
+        <div class="no-data-message">
+          <p>No data available</p>
+        </div>
+      `;
+    }
+  }
+
+  showDataError() {
+    const containers = document.querySelectorAll(".container");
+    containers.forEach((container) => {
+      container.innerHTML = `
+        <div class="data-error">
+          <p>Failed to load data. Please try again later.</p>
+        </div>
+      `;
+    });
   }
 }
 
@@ -297,384 +365,401 @@ function getAvatar(gender, username) {
 }
 
 function createXpProg(data) {
-  const sortedData = data.sort(
-    (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
-  );
-  let cumulativeXP = 0;
-  const dataPoints = sortedData.map((transaction) => {
-    cumulativeXP += transaction.amount;
-    return {
-      date: new Date(transaction.createdAt),
-      name: transaction.object.name,
-      xp: cumulativeXP,
-    };
-  });
+  try {
+    if (!data || data.length === 0) {
+      throw new Error("No XP progress data available");
+    }
 
-  const startDate = dataPoints[0].date;
-  const endDate = dataPoints[dataPoints.length - 1].date;
-  const maxXP = dataPoints[dataPoints.length - 1].xp;
+    const sortedData = data.sort(
+      (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+    );
+    let cumulativeXP = 0;
+    const dataPoints = sortedData.map((transaction) => {
+      cumulativeXP += transaction.amount;
+      return {
+        date: new Date(transaction.createdAt),
+        name: transaction.object?.name || "Unknown",
+        xp: cumulativeXP,
+      };
+    });
 
-  const width = 680;
-  const height = 303;
+    const startDate = dataPoints[0].date;
+    const endDate = dataPoints[dataPoints.length - 1].date;
+    const maxXP = dataPoints[dataPoints.length - 1].xp;
 
-  function scaleX(date) {
-    const timeRange = endDate - startDate;
-    const timePosition = date - startDate;
-    return (timePosition / timeRange) * width;
-  }
+    const width = 680;
+    const height = 303;
 
-  function scaleY(xp) {
-    return height - (xp / maxXP) * height;
-  }
+    function scaleX(date) {
+      const timeRange = endDate - startDate;
+      const timePosition = date - startDate;
+      return (timePosition / timeRange) * width;
+    }
 
-  const pathData = dataPoints
-    .map((point, index) => {
+    function scaleY(xp) {
+      return height - (xp / maxXP) * height;
+    }
+
+    const pathData = dataPoints
+      .map((point, index) => {
+        const x = scaleX(point.date);
+        const y = scaleY(point.xp);
+        return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+      })
+      .join(" ");
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("height", "100%");
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("style", "overflow: visible");
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", pathData);
+    path.setAttribute("stroke", "#b6b8ba");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke-width", "2");
+
+    svg.appendChild(path);
+
+    dataPoints.forEach((point) => {
+      const circle = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "circle"
+      );
       const x = scaleX(point.date);
       const y = scaleY(point.xp);
-      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
-    })
-    .join(" ");
 
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("height", "100%");
-  svg.setAttribute("width", "100%");
-  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("style", "overflow: visible");
+      circle.setAttribute("cx", x);
+      circle.setAttribute("cy", y);
+      circle.setAttribute("r", "4");
+      circle.setAttribute("fill", "#4ffdca");
 
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", pathData);
-  path.setAttribute("stroke", "#b6b8ba");
-  path.setAttribute("fill", "none");
-  path.setAttribute("stroke-width", "2");
+      circle.addEventListener("mouseover", (e) => {
+        circle.setAttribute("r", "6");
+        const tooltip = document.createElement("div", "tooltip");
+        tooltip.className = "tooltip";
+        tooltip.style.position = "absolute";
+        tooltip.style.left = `${e.pageX + 30}px`;
+        tooltip.style.top = `${e.pageY - 5}px`;
+        tooltip.style.color = "white";
+        tooltip.style.fontSize = "12px";
 
-  svg.appendChild(path);
+        tooltip.innerHTML = `
+          Name: ${point.name}<br>
+          Total XP: ${bTokb(point.xp)}
+        `;
 
-  dataPoints.forEach((point) => {
-    const circle = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "circle"
-    );
-    const x = scaleX(point.date);
-    const y = scaleY(point.xp);
-
-    circle.setAttribute("cx", x);
-    circle.setAttribute("cy", y);
-    circle.setAttribute("r", "4");
-    circle.setAttribute("fill", "#4ffdca");
-
-    circle.addEventListener("mouseover", (e) => {
-      circle.setAttribute("r", "6");
-      const tooltip = document.createElement("div", "tooltip");
-      tooltip.className = "tooltip";
-      tooltip.style.position = "absolute";
-      tooltip.style.left = `${e.pageX + 30}px`;
-      tooltip.style.top = `${e.pageY - 5}px`;
-      tooltip.style.color = "white";
-      tooltip.style.fontSize = "12px";
-
-      tooltip.innerHTML = `
-        Name: ${point.name}<br>
-        Total XP: ${bTokb(point.xp)}
-      `;
-
-      document.body.appendChild(tooltip);
-      circle.addEventListener("mouseout", () => {
-        circle.setAttribute("r", "4");
-        tooltip.remove();
+        document.body.appendChild(tooltip);
+        circle.addEventListener("mouseout", () => {
+          circle.setAttribute("r", "4");
+          tooltip.remove();
+        });
       });
+      svg.appendChild(circle);
     });
-    svg.appendChild(circle);
-  });
 
-  let xpDiv = document.querySelector(".xp-graph");
-  if (xpDiv) {
-    xpDiv.append(svg);
+    let xpDiv = document.querySelector(".xp-graph");
+    if (xpDiv) {
+      xpDiv.append(svg);
+    }
+  } catch (error) {
+    console.error("Error creating XP progress graph:", error);
+    return null;
   }
 }
 
 function createSkillsGraph(topSkills) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", `0 0 400 400`);
-  svg.style.width = "100%";
-  svg.style.height = "auto";
-
-  // Configuration
-  const width = 400; // Width of the SVG
-  const height = 400; // Height of the SVG
-  const centerX = width / 2; // Center X
-  const centerY = height / 2; // Center Y
-  const maxRadius = Math.min(width, height) / 2 - 30; // Radius of the radar chart
-  const maxValue = Math.max(...topSkills.map((skill) => skill.amount)); // Maximum skill value
-
-  // Normalize skill amounts to fit within the radar chart
-  const normalizedSkills = topSkills.map((skill) => ({
-    ...skill,
-    normalizedAmount: (skill.amount / maxValue) * maxRadius,
-  }));
-
-  // Function to convert polar coordinates to Cartesian coordinates
-  function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
-    const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
-    return {
-      x: centerX + radius * Math.cos(angleInRadians),
-      y: centerY + radius * Math.sin(angleInRadians),
-    };
-  }
-
-  // Generate points for the radar chart
-  const points = normalizedSkills.map((skill, index) => {
-    const angle = (index / normalizedSkills.length) * 360;
-    const point = polarToCartesian(
-      centerX,
-      centerY,
-      skill.normalizedAmount,
-      angle
-    );
-    return `${point.x},${point.y}`;
-  });
-
-  // Generate grid lines and labels
-  const gridLines = [];
-  const labelPoints = [];
-  for (let i = 0; i < normalizedSkills.length; i++) {
-    const angle = (i / normalizedSkills.length) * 360;
-    const outerPoint = polarToCartesian(centerX, centerY, maxRadius, angle);
-    const innerPoint = polarToCartesian(centerX, centerY, 0, angle);
-    gridLines.push(
-      `<line x1="${innerPoint.x}" y1="${innerPoint.y}" x2="${outerPoint.x}" y2="${outerPoint.y}" stroke="#ddd" />`
-    );
-    labelPoints.push(outerPoint);
-  }
-
-  // Add grid lines
-  svg.innerHTML += gridLines.join("");
-
-  // Add circular grid levels
-  for (let r = maxRadius / 4; r <= maxRadius; r += maxRadius / 4) {
-    const circle = `<circle cx="${centerX}" cy="${centerY}" r="${r}" fill="none" stroke="#ddd" />`;
-    svg.innerHTML += circle;
-  }
-
-  // Add the polygon for the radar chart
-  const polygon = `<polygon points="${points.join(
-    " "
-  )}" fill="rgba(79, 253, 202, 0.6)" stroke="#4ffdca" />`;
-  svg.innerHTML += polygon;
-
-  // Add labels for each skill
-  normalizedSkills.forEach((skill, index) => {
-    const angle = (index / normalizedSkills.length) * 360;
-    const labelPoint = polarToCartesian(
-      centerX,
-      centerY,
-      maxRadius + 20,
-      angle
-    );
-
-    // Adjust text positioning for top and bottom labels
-    const adjustedLabelPoint = {
-      x: labelPoint.x,
-      y: labelPoint.y,
-    };
-
-    if (angle > 270 || angle < 90) {
-      // Top labels: Move slightly downward
-      adjustedLabelPoint.y += 10;
-    } else if (angle > 90 && angle < 270) {
-      // Bottom labels: Move slightly upward
-      adjustedLabelPoint.y -= 10;
+  try {
+    if (!topSkills || topSkills.length === 0) {
+      throw new Error("No skills data available");
     }
 
-    const text = `<text x="${adjustedLabelPoint.x}" y="${
-      adjustedLabelPoint.y
-    }" text-anchor="middle" dominant-baseline="middle" font-size="18" fill="#fafafb">${skill.type.replace(
-      "skill_",
-      ""
-    )}</text>`;
-    svg.innerHTML += text;
-  });
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 400 400`);
+    svg.style.width = "100%";
+    svg.style.height = "auto";
 
-  // Append the SVG to the specified container
-  const container = document.querySelector(".skill-graph");
-  if (container) {
-    container.appendChild(svg);
+    const width = 400;
+    const height = 400;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const maxRadius = Math.min(width, height) / 2 - 30;
+    const maxValue = Math.max(...topSkills.map((skill) => skill.amount), 100);
+
+    const normalizedSkills = topSkills.map((skill) => ({
+      ...skill,
+      normalizedAmount: (skill.amount / maxValue) * maxRadius,
+    }));
+
+    function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+      const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
+      return {
+        x: centerX + radius * Math.cos(angleInRadians),
+        y: centerY + radius * Math.sin(angleInRadians),
+      };
+    }
+
+    const points = normalizedSkills.map((skill, index) => {
+      const angle = (index / normalizedSkills.length) * 360;
+      const point = polarToCartesian(
+        centerX,
+        centerY,
+        skill.normalizedAmount,
+        angle
+      );
+      return `${point.x},${point.y}`;
+    });
+
+    const gridLines = [];
+    const labelPoints = [];
+    for (let i = 0; i < normalizedSkills.length; i++) {
+      const angle = (i / normalizedSkills.length) * 360;
+      const outerPoint = polarToCartesian(centerX, centerY, maxRadius, angle);
+      const innerPoint = polarToCartesian(centerX, centerY, 0, angle);
+      gridLines.push(
+        `<line x1="${innerPoint.x}" y1="${innerPoint.y}" x2="${outerPoint.x}" y2="${outerPoint.y}" stroke="#ddd" />`
+      );
+      labelPoints.push(outerPoint);
+    }
+
+    svg.innerHTML += gridLines.join("");
+
+    for (let r = maxRadius / 4; r <= maxRadius; r += maxRadius / 4) {
+      const circle = `<circle cx="${centerX}" cy="${centerY}" r="${r}" fill="none" stroke="#ddd" />`;
+      svg.innerHTML += circle;
+    }
+
+    const polygon = `<polygon points="${points.join(
+      " "
+    )}" fill="rgba(79, 253, 202, 0.6)" stroke="#4ffdca" />`;
+    svg.innerHTML += polygon;
+
+    normalizedSkills.forEach((skill, index) => {
+      const angle = (index / normalizedSkills.length) * 360;
+      const labelPoint = polarToCartesian(
+        centerX,
+        centerY,
+        maxRadius + 20,
+        angle
+      );
+
+      const adjustedLabelPoint = {
+        x: labelPoint.x,
+        y: labelPoint.y,
+      };
+
+      if (angle > 270 || angle < 90) {
+        adjustedLabelPoint.y += 10;
+      } else if (angle > 90 && angle < 270) {
+        adjustedLabelPoint.y -= 10;
+      }
+
+      const text = `<text x="${adjustedLabelPoint.x}" y="${
+        adjustedLabelPoint.y
+      }" text-anchor="middle" dominant-baseline="middle" font-size="18" fill="#fafafb">${skill.type.replace(
+        "skill_",
+        ""
+      )}</text>`;
+      svg.innerHTML += text;
+    });
+
+    const container = document.querySelector(".skill-graph");
+    if (container) {
+      container.appendChild(svg);
+    }
+  } catch (error) {
+    console.error("Error creating skills graph:", error);
+    return null;
   }
 }
 
 function createAuditGraph(data) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 400 400");
-  svg.style.width = "100%";
-  svg.style.height = "auto";
+  try {
+    if (!data || (data.totalUp === 0 && data.totalDown === 0)) {
+      throw new Error("No audit data available");
+    }
 
-  const { totalUp, totalDown } = data;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 400 400");
+    svg.style.width = "100%";
+    svg.style.height = "auto";
 
-  // Configuration
-  const width = 400;
-  const height = 400;
-  const barWidth = 100;
-  const barHeight = Math.min(totalUp, totalDown); // Use the smaller value as max height
-  const scale = (height * 0.8) / barHeight; // Scale factor for bar height
+    const { totalUp, totalDown } = data;
+    const width = 400;
+    const height = 400;
+    const barWidth = 100;
+    const maxHeight = Math.max(totalUp, totalDown);
+    const scale = (height * 0.8) / (maxHeight || 1);
 
-  // Calculate heights
-  const upHeight = totalUp * scale;
-  const downHeight = totalDown * scale;
+    const upHeight = totalUp * scale;
+    const downHeight = totalDown * scale;
 
-  // Draw 'totalUp' segment
-  const upRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  upRect.setAttribute("x", (width - barWidth) / 2);
-  upRect.setAttribute("y", height - upHeight);
-  upRect.setAttribute("width", barWidth);
-  upRect.setAttribute("height", upHeight);
-  upRect.setAttribute("fill", "#4ffdca");
-  svg.appendChild(upRect);
+    const upRect = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "rect"
+    );
+    upRect.setAttribute("x", (width - barWidth) / 2);
+    upRect.setAttribute("y", height - upHeight);
+    upRect.setAttribute("width", barWidth);
+    upRect.setAttribute("height", upHeight);
+    upRect.setAttribute("fill", "#4ffdca");
+    svg.appendChild(upRect);
 
-  // Draw 'totalDown' segment
-  const downRect = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "rect"
-  );
-  downRect.setAttribute("x", (width - barWidth) / 2);
-  downRect.setAttribute("y", height - (upHeight + downHeight));
-  downRect.setAttribute("width", barWidth);
-  downRect.setAttribute("height", downHeight);
-  downRect.setAttribute("fill", "#ff0826");
-  svg.appendChild(downRect);
+    const downRect = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "rect"
+    );
+    downRect.setAttribute("x", (width - barWidth) / 2);
+    downRect.setAttribute("y", height - (upHeight + downHeight));
+    downRect.setAttribute("width", barWidth);
+    downRect.setAttribute("height", downHeight);
+    downRect.setAttribute("fill", "#ff0826");
+    svg.appendChild(downRect);
 
-  // Add labels
-  const upLabel = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "text"
-  );
-  upLabel.setAttribute("x", (width - barWidth) / 2 + barWidth / 2);
-  upLabel.setAttribute("y", height - upHeight / 2);
-  upLabel.setAttribute("text-anchor", "middle");
-  upLabel.setAttribute("font-size", "12");
-  upLabel.textContent = `Up: ${bTokb(totalUp)}`;
-  svg.appendChild(upLabel);
+    const upLabel = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "text"
+    );
+    upLabel.setAttribute("x", (width - barWidth) / 2 + barWidth / 2);
+    upLabel.setAttribute("y", height - upHeight / 2);
+    upLabel.setAttribute("text-anchor", "middle");
+    upLabel.setAttribute("font-size", "12");
+    upLabel.textContent = `Up: ${bTokb(totalUp)}`;
+    svg.appendChild(upLabel);
 
-  const downLabel = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "text"
-  );
-  downLabel.setAttribute("x", (width - barWidth) / 2 + barWidth / 2);
-  downLabel.setAttribute("y", height - (upHeight + downHeight / 2));
-  downLabel.setAttribute("text-anchor", "middle");
-  downLabel.setAttribute("font-size", "12");
-  downLabel.textContent = `Down: ${totalDown}`;
-  svg.appendChild(downLabel);
+    const downLabel = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "text"
+    );
+    downLabel.setAttribute("x", (width - barWidth) / 2 + barWidth / 2);
+    downLabel.setAttribute("y", height - (upHeight + downHeight / 2));
+    downLabel.setAttribute("text-anchor", "middle");
+    downLabel.setAttribute("font-size", "12");
+    downLabel.textContent = `Down: ${totalDown}`;
+    svg.appendChild(downLabel);
 
-  // Append SVG to container
-  const container = document.querySelector(".audit-graph");
-  if (container) {
-    container.appendChild(svg);
+    const container = document.querySelector(".audit-graph");
+    if (container) {
+      container.appendChild(svg);
+    }
+  } catch (error) {
+    console.error("Error creating audit graph:", error);
+    return null;
   }
 }
 
-function createProjectStatusGraphWithDate(projects, containerId) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  const heightPerProject = 30;
-  const totalHeight = projects.length * heightPerProject + 20;
-  svg.setAttribute("viewBox", `0 0 700 ${totalHeight}`);
-  svg.style.width = "100%";
-  svg.style.height = "auto";
-
-  // Configuration
-  const width = 700; // Increased width to accommodate the date
-  const barWidthScale = 0.6; // Scale factor for bar width
-  const maxBarWidth = width * barWidthScale;
-
-  // Helper function to determine bar color and status
-  function getBarColorAndStatus(grade) {
-    if (grade === null) {
-      return { color: "#aaaaaa", status: "Ungraded" }; // Gray for ungraded
-    } else if (grade >= 1) {
-      return { color: "#08FFE1", status: "Pass", text: "#000", date: "#555" };
-    } else {
-      return {
-        color: "#ff0826",
-        status: "Fail",
-        text: "white",
-        date: "#a5a5a5",
-      };
+function createProjectStatusGraphWithDate(projects) {
+  try {
+    if (!projects || projects.length === 0) {
+      throw new Error("No projects data available");
     }
-  }
 
-  // Helper function to format date
-  function formatDate(dateString) {
-    const date = new Date(dateString);
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${String(date.getDate()).padStart(2, "0")}`;
-  }
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const heightPerProject = 30;
+    const totalHeight = projects.length * heightPerProject + 20;
+    svg.setAttribute("viewBox", `0 0 700 ${totalHeight}`);
+    svg.style.width = "100%";
+    svg.style.height = "auto";
 
-  // Draw each project as a horizontal bar
-  projects.forEach((project, index) => {
-    const { name, grade, createdAt } = project;
-    const { color, status, text, date } = getBarColorAndStatus(grade);
+    const width = 700;
+    const barWidthScale = 0.6;
+    const maxBarWidth = width * barWidthScale;
 
-    // Calculate position and dimensions
-    const y = index * heightPerProject + 10; // Vertical position
-    const barWidth = grade !== null ? grade * maxBarWidth : 0; // Bar width based on grade
+    function getBarColorAndStatus(grade) {
+      if (grade === null) {
+        return {
+          color: "#aaaaaa",
+          status: "Ungraded",
+          text: "#000",
+          date: "#555",
+        };
+      } else if (grade >= 1) {
+        return { color: "#08FFE1", status: "Pass", text: "#000", date: "#555" };
+      } else {
+        return {
+          color: "#ff0826",
+          status: "Fail",
+          text: "white",
+          date: "#a5a5a5",
+        };
+      }
+    }
 
-    // Draw the bar
-    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    rect.setAttribute("x", 10); // Horizontal offset
-    rect.setAttribute("y", y);
-    rect.setAttribute("width", barWidth);
-    rect.setAttribute("height", heightPerProject - 5);
-    rect.setAttribute("fill", color);
-    svg.appendChild(rect);
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(date.getDate()).padStart(2, "0")}`;
+    }
 
-    // Add project name
-    const nameText = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "text"
-    );
-    nameText.setAttribute("x", 10);
-    nameText.setAttribute("y", y + heightPerProject / 2 + 3); // Centered vertically
-    nameText.setAttribute("font-size", "12");
-    nameText.setAttribute("fill", text);
-    nameText.textContent = name;
-    svg.appendChild(nameText);
+    projects.forEach((project, index) => {
+      const { name, grade, createdAt } = project;
+      const { color, status, text, date } = getBarColorAndStatus(grade);
 
-    // Add creation date
-    const dateText = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "text"
-    );
-    dateText.setAttribute("x", 200);
-    dateText.setAttribute("y", y + heightPerProject / 2 + 3);
-    dateText.setAttribute("font-size", "12");
-    dateText.setAttribute("fill", date);
-    dateText.textContent = `${formatDate(createdAt)}`;
-    svg.appendChild(dateText);
+      const y = index * heightPerProject + 10;
+      const barWidth = grade !== null ? grade * maxBarWidth : 0;
 
-    // Add status label
-    const statusText = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "text"
-    );
-    statusText.setAttribute("x", width - 180);
-    statusText.setAttribute("y", y + heightPerProject / 2 + 3);
-    statusText.setAttribute("font-size", "12");
-    statusText.setAttribute("fill", text);
-    statusText.textContent = `${status} (${
-      grade !== null ? grade.toFixed(2) : "N/A"
-    })`;
-    svg.appendChild(statusText);
-  });
+      const rect = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "rect"
+      );
+      rect.setAttribute("x", 10);
+      rect.setAttribute("y", y);
+      rect.setAttribute("width", barWidth);
+      rect.setAttribute("height", heightPerProject - 5);
+      rect.setAttribute("fill", color);
+      svg.appendChild(rect);
 
-  // Append SVG to container
-  const container = document.querySelector(".stat-graph");
-  if (container) {
-    container.appendChild(svg);
+      const nameText = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "text"
+      );
+      nameText.setAttribute("x", 10);
+      nameText.setAttribute("y", y + heightPerProject / 2 + 3);
+      nameText.setAttribute("font-size", "12");
+      nameText.setAttribute("fill", text);
+      nameText.textContent = name;
+      svg.appendChild(nameText);
+
+      const dateText = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "text"
+      );
+      dateText.setAttribute("x", 200);
+      dateText.setAttribute("y", y + heightPerProject / 2 + 3);
+      dateText.setAttribute("font-size", "12");
+      dateText.setAttribute("fill", date);
+      dateText.textContent = `${formatDate(createdAt)}`;
+      svg.appendChild(dateText);
+
+      const statusText = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "text"
+      );
+      statusText.setAttribute("x", width - 180);
+      statusText.setAttribute("y", y + heightPerProject / 2 + 3);
+      statusText.setAttribute("font-size", "12");
+      statusText.setAttribute("fill", text);
+      statusText.textContent = `${status} (${
+        grade !== null ? grade.toFixed(2) : "N/A"
+      })`;
+      svg.appendChild(statusText);
+    });
+
+    const container = document.querySelector(".stat-graph");
+    if (container) {
+      container.appendChild(svg);
+    }
+  } catch (error) {
+    console.error("Error creating projects status graph:", error);
+    return null;
   }
 }
 
 function bTokb(b) {
-  if (!b) return;
+  if (!b && b !== 0) return "0B";
   return `${Math.floor(b / 1000)}kb`;
 }
